@@ -13,18 +13,18 @@
 <body>
 <div id="app">
     <div class="product">
-
-        <figure class="product-image">
-            <img :src="image" :alt="altText">
-            <figcaption><a :href="link">More products like this.</a></figcaption>
-        </figure>
-
+        <div class="product-image">
+            <img :src="image" :alt="altText"/>
+        </div>
         <div class="product-info">
             <h1>{{ product }}</h1>
+            <p v-if="inventory > 10">In stock</p>
+            <p v-else-if="inventory <= 10 && inventory > 0">Almost sold out!</p>
+            <p v-else>Out of stock</p>
+            <span v-if="onSale">On Sale</span>
         </div>
-
     </div>
-
 </div>
+
 </body>
 </html>
