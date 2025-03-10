@@ -16,30 +16,43 @@
         <div class="product-image">
             <img :src="image" :alt="altText"/>
         </div>
+
         <div class="product-info">
             <h1>{{ product }}</h1>
             <p v-if="inStock">In stock</p>
-            <p v-else>Out of Stock</p>
+            <p v-else :style="inStock === false ? { 'text-decoration': 'line-through' } : {}">Out of Stock</p>
             <ul>
                 <li v-for="detail in details">{{ detail }}</li>
             </ul>
-            <div v-for="variant in variants" :key="variant.variantId">
-                <p @mouseover="updateProduct(variant.variantImage)">
-                    {{ variant.variantColor }}
-                </p>
+
+
+            <div
+                    class="color-box"
+                    v-for="variant in variants"
+                    :key="variant.variantId"
+                    :style="{ backgroundColor:variant.variantColor }"
+                    @mouseover="updateProduct(variant.variantImage)"
+            >
             </div>
+
+
+
             <div class="cart">
                 <p>Cart({{ cart }})</p>
             </div>
 
-            <button @click="addToCart">Add to cart</button>
-            <button @click="decreaseToCart">Decrease to cart</button>
-
+            <button
+                :disabled="!inStock"
+                @click="addToCart"
+                :class="{ disabledButton: !inStock }"
+            >
+                Add to cart
+            </button>
         </div>
 
     </div>
-
 </div>
+
 
 </body>
 </html>
