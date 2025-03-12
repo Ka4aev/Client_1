@@ -1,41 +1,47 @@
-let eventBus = new Vue()
+let eventBus = new Vue();
 
 Vue.component('product-review', {
+    props: {
+        product: {
+            type: String,
+            required: true
+        },
+        selectedColor: {
+            type: String,
+            required: true
+        }
+    },
     template: `
-
 <form class="review-form" @submit.prevent="onSubmit">
 
-<p v-if="errors.length">
- <b>Please correct the following error(s):</b>
- <ul>
-   <li v-for="error in errors">{{ error }}</li>
- </ul>
-</p>
+    <p>
+        <label for="name">Name:</label>
+        <input id="name" v-model="name" placeholder="YOUR NAME (VANYA)">
+        <span v-if="errors.name" class="error-message">{{ errors.name }}</span>
+    </p>
 
- <p>
-   <label for="name">Name:</label>
-   <input id="name" v-model="name" placeholder="name">
- </p>
+    <p>
+        <label for="review">Review:</label>
+        <textarea id="review" placeholder="REALLY GOOD SOCKS" v-model="review"></textarea>
+        <span v-if="errors.review" class="error-message">{{ errors.review }}</span>
+    </p>
 
- <p>
-   <label for="review">Review:</label>
-   <textarea id="review" v-model="review"></textarea>
- </p>
+    <p>
+        <label for="rating">Rating (1-5):</label>
+        <select id="rating" v-model.number="rating">
+            <option disabled value="">Select Rating</option>
+            <option>5</option>
+            <option>4</option>
+            <option>3</option>
+            <option>2</option>
+            <option>1</option>
+        </select>
+        <span v-if="errors.rating" class="error-message">{{ errors.rating }}</span>
+    </p>
 
- <p>
-   <label for="rating">Rating:</label>
-   <select id="rating" v-model.number="rating">
-     <option>5</option>
-     <option>4</option>
-     <option>3</option>
-     <option>2</option>
-     <option>1</option>
-   </select>
- </p>
-
- <p>
-   <input type="submit" value="Submit"> 
- </p>
+    <p>
+        <input type="submit" value="Submit"> 
+    </p>
 
 </form>
  `,
@@ -44,29 +50,34 @@ Vue.component('product-review', {
             name: null,
             review: null,
             rating: null,
-            errors: []
-        }
+            errors: {}
+        };
     },
-    methods:{
+    methods: {
         onSubmit() {
-            if(this.name && this.review && this.rating) {
+            this.errors = {};
+
+            if (!this.name) this.errors.name = "Name is required.";
+            if (!this.review) this.errors.review = "Review is required.";
+            if (!this.rating) this.errors.rating = "Rating is required.";
+
+            if (Object.keys(this.errors).length === 0) {
                 let productReview = {
                     name: this.name,
                     review: this.review,
-                    rating: this.rating
-                }
-                eventBus.$emit('review-submitted', productReview)
-                this.name = null
-                this.review = null
-                this.rating = null
-            } else {
-                if(!this.name) this.errors.push("Name required.")
-                if(!this.review) this.errors.push("Review required.")
-                if(!this.rating) this.errors.push("Rating required.")
+                    rating: this.rating,
+                    product: this.product,
+                    color: this.selectedColor
+                };
+                eventBus.$emit('review-submitted', productReview);
+                this.name = null;
+                this.review = null;
+                this.rating = null;
             }
         }
     }
-})
+});
+
 
 Vue.component('product', {
     props: {
@@ -77,12 +88,26 @@ Vue.component('product', {
     },
     mounted() {
         eventBus.$on('review-submitted', productReview => {
-            this.reviews.push(productReview)
-        })
+            this.reviews.push(productReview);
+        });
     },
     template: `
    <div class="product">
-    <div class="product-image">
+       <div v-if="isOpen" class="modal" @click.self="isOpen = false">
+           <div class="modal-info">
+               <h2>{{ product }}</h2>
+               <ul>
+                   <li v-for="detail in details">{{ detail }}</li>
+               </ul>
+      
+               <h3>
+               Color:  
+                   <p>{{selectedColor}}</p>
+               </h3>
+           </div>
+       </div>
+
+       <div class="product-image">
            <img :src="image" :alt="altText"/>
        </div>
 
@@ -103,25 +128,27 @@ Vue.component('product', {
                <ul v-show="selectedTab === 'Details'">
                     <li v-for="detail in details">{{ detail }}</li>
                </ul>
-                <p v-show="selectedTab === 'Shipping'">Shipping: {{ shipping }}</p>
+               <p v-show="selectedTab === 'Shipping'">Shipping: {{ shipping }}</p>
             </div>
+
            <div
-                   class="color-box"
-                   v-for="(variant, index) in variants"
-                   :key="variant.variantId"
-                   :style="{ backgroundColor:variant.variantColor }"
-                   @mouseover="updateProduct(index)"
+               class="color-box"
+               v-for="(variant, index) in variants"
+               :key="variant.variantId"
+               :style="{ backgroundColor: variant.variantColor }"
+               @mouseover="updateProduct(index)"
            ></div>
           
            <button
-                   v-on:click="addToCart"
-                   :disabled="!inStock"
-                   :class="{ disabledButton: !inStock }"
+               @click="addToCart"
+               :disabled="!inStock"
+               :class="{ disabledButton: !inStock }"
            >
                Add to cart
            </button>    
-           <product-tabs :reviews="reviews"></product-tabs>
+           <product-tabs :product="product" :selectedColor="selectedColor" :reviews="reviews"></product-tabs>
        </div>           
+   </div>
  `,
     data() {
         return {
@@ -130,6 +157,7 @@ Vue.component('product', {
             selectedVariant: 0,
             altText: "A pair of socks",
             details: ['80% cotton', '20% polyester', 'Gender-neutral'],
+            isOpen: false,
             variants: [
                 {
                     variantId: 2234,
@@ -141,22 +169,22 @@ Vue.component('product', {
                     variantId: 2235,
                     variantColor: 'blue',
                     variantImage: "./assets/vmSocks-blue-onWhite.jpg",
-                    variantQuantity: 0
+                    variantQuantity: 1
                 }
             ],
             reviews: [],
             tabs: ['Details', 'Shipping'],
             selectedTab: 'Details'
-        }
+        };
     },
     methods: {
         addToCart() {
             this.$emit('add-to-cart', this.variants[this.selectedVariant].variantId);
+            this.isOpen = true;
         },
         updateProduct(index) {
             this.selectedVariant = index;
-            console.log(index);
-        },
+        }
     },
     computed: {
         title() {
@@ -166,23 +194,31 @@ Vue.component('product', {
             return this.variants[this.selectedVariant].variantImage;
         },
         inStock() {
-            return this.variants[this.selectedVariant].variantQuantity
+            return this.variants[this.selectedVariant].variantQuantity > 0;
         },
         shipping() {
-            if (this.premium) {
-                return "Free";
-            } else {
-                return 2.99
-            }
+            return this.premium ? "Free" : "2.99";
+        },
+        selectedColor() {
+            return this.variants[this.selectedVariant].variantColor;
         }
     }
-})
+});
+
 
 Vue.component('product-tabs', {
     props: {
         reviews: {
             type: Array,
             required: false
+        },
+        product: {
+            type: String,
+            required: true
+        },
+        selectedColor: {
+            type: String,
+            required: true
         }
     },
 
@@ -199,14 +235,15 @@ Vue.component('product-tabs', {
          <p v-if="!reviews.length">There are no reviews yet.</p>
          <ul>
            <li v-for="review in reviews">
-           <p>{{ review.name }}</p>
-           <p>Rating: {{ review.rating }}</p>
-           <p>{{ review.review }}</p>
+               <h2>{{ product }} - {{ review.color }}</h2>
+               <p>{{ review.name }}</p>
+               <p>Rating: {{ review.rating }}</p>
+               <p>{{ review.review }}</p>
            </li>
          </ul>
        </div>
        <div v-show="selectedTab === 'Make a Review'">
-            <product-review></product-review>
+            <product-review :product="product" :selectedColor="selectedColor"></product-review>
        </div>
      </div>
 `,
@@ -214,14 +251,10 @@ Vue.component('product-tabs', {
     data() {
         return {
             tabs: ['Reviews', 'Make a Review'],
-            selectedTab: 'Reviews'  // устанавливается с помощью @click
+            selectedTab: 'Reviews'
         }
-    },
-    methods: {
-
     }
-})
-
+});
 
 
 let app = new Vue({
@@ -235,4 +268,4 @@ let app = new Vue({
             this.cart.push(id);
         }
     }
-})
+});
